@@ -98,7 +98,7 @@ class Tool(benchexec.tools.template.BaseTool2):
         if "-m" not in options and "--memory_limit" not in options:
             if rlimits.memory is None:
                 # No memory limit has been set
-                # TODO: should we warn in this case? Vampire is going to use the default of 3000MB
+                # TODO: should we warn in this case? Vampire is going to use the default of 3000MiB
                 pass
             else:
                 # Vampire's option '--memory_limit/-m' takes the value in MiB
@@ -134,18 +134,26 @@ class Tool(benchexec.tools.template.BaseTool2):
                 return "TIMEOUT"
             if run.exit_code.value == 4:
                 # Some kind of system error happened
-                if run.output.text.startswith("Parsing error"):
-                    return "Parsing error"
+                if run.output.text.startswith("Parsing Error"):
+                    return "PARSING ERROR"
             if run.exit_code.value == 1:
+                # Error during portfolio mode
+                if run.output.text.startswith("% Exception at proof search level\n"):
+                    if any(line.startswith("Parsing Error") for line in run.output):
+                        return "PARSING ERROR"
                 # Not really an error but unable to finish
                 reasons = self.get_other_termination_reasons(run.output)
                 if reasons == ["Time limit"]:
                     return "TIMEOUT"
+                if reasons == ["Memory limit"]:
+                    return "OUT OF MEMORY"
                 if reasons == ["Refutation not found, incomplete strategy"]:
-                    return "Incomplete"
+                    return "INCOMPLETE"
                 if reasons == ["Refutation not found, non-redundant clauses discarded"]:
-                    return "Incomplete"
+                    return "INCOMPLETE"
             # Some other error
+            # print("OTHER ERROR")
+            return "OTHER"
             return result.RESULT_ERROR
         else:
             # Successfully finished
@@ -209,6 +217,6 @@ class Tool(benchexec.tools.template.BaseTool2):
         # Extract SZS result and stats, runtimestats, time stats?
         # Only for single-strategy runs.
         # For portfolio, return 'successful_strategy'?
-        print(f"get_value for id {identifier}")
+        # print(f"get_value for id {identifier}")
         if identifier == "szs-status":
             return self.get_szs_status(output) or "--"
