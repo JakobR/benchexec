@@ -2,6 +2,8 @@ benchexec (3.990-1) bionic; urgency=medium
 
   * New upstream version.
 
+ -- Internal version <x@y.z>  Fri, 18 Dec 2020 10:34:33 +0100
+
 benchexec (3.99-1) bionic; urgency=medium
 
   * New upstream version.
