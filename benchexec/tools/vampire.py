@@ -19,6 +19,7 @@ class Tool(benchexec.tools.template.BaseTool2):
         return "Vampire"
 
     def executable(self, tool_locator):
+        # TODO: Ask how to override executable name for one run of benchexec
         return tool_locator.find_executable("vampire")
 
     def version(self, executable):
@@ -152,8 +153,7 @@ class Tool(benchexec.tools.template.BaseTool2):
                 if reasons == ["Refutation not found, non-redundant clauses discarded"]:
                     return "INCOMPLETE"
             # Some other error
-            # print("OTHER ERROR")
-            return "OTHER"
+            # return "OTHER"
             return result.RESULT_ERROR
         else:
             # Successfully finished
