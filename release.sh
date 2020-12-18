@@ -14,30 +14,30 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
-OLD_VERSION="$(grep __version__ benchexec/__init__.py | sed -e 's/^.*"\(.*\)".*$/\1/')"
+#OLD_VERSION="$(grep __version__ benchexec/__init__.py | sed -e 's/^.*"\(.*\)".*$/\1/')"
 VERSION="$1"
-if [ $(expr match "$VERSION" ".*dev") -gt 0 ]; then
-  echo "Cannot release development version."
-  exit 1
-fi
-if [ "$VERSION" = "$OLD_VERSION" ]; then
-  echo "Version already exists."
-  exit 1
-fi
-if ! grep -q "^#* *BenchExec $VERSION" CHANGELOG.md; then
-  echo "Cannot release version without changelog, please update CHANGELOG.md"
-  exit 1
-fi
-if [ ! -z "$(git status -uno -s)" ]; then
-  echo "Cannot release with local changes, please stash them."
-  exit 1
-fi
+#if [ $(expr match "$VERSION" ".*dev") -gt 0 ]; then
+#  echo "Cannot release development version."
+#  exit 1
+#fi
+#if [ "$VERSION" = "$OLD_VERSION" ]; then
+#  echo "Version already exists."
+#  exit 1
+#fi
+#if ! grep -q "^#* *BenchExec $VERSION" CHANGELOG.md; then
+#  echo "Cannot release version without changelog, please update CHANGELOG.md"
+#  exit 1
+#fi
+#if [ ! -z "$(git status -uno -s)" ]; then
+#  echo "Cannot release with local changes, please stash them."
+#  exit 1
+#fi
 
-git remote update origin
-if [ ! -z "$(git rev-list HEAD..origin/master)" ]; then
-  echo "Local branch is not up-to-date, please rebase."
-  exit 1
-fi
+#git remote update origin
+#if [ ! -z "$(git rev-list HEAD..origin/master)" ]; then
+#  echo "Local branch is not up-to-date, please rebase."
+#  exit 1
+#fi
 
 if [ -z "$DEBFULLNAME" ]; then
   echo "Please define environment variable DEBFULLNAME with your name you want to use for the Debian package."
@@ -47,21 +47,21 @@ if [ -z "$DEBEMAIL" ]; then
   echo "Please define environment variable DEBEMAIL with your name you want to use for the Debian package."
   exit 1
 fi
-if [ -z "$DEBKEY" ]; then
-  echo "Please define environment variable DEBKEY with your key ID you want to use for signing the Debian package."
-  exit 1
-fi
-if ! which twine > /dev/null; then
-  echo 'Please install twine>=1.11.0, e.g. with "pipx install twine" or "pip3 install --user twine".'
-  exit 1
-fi
+#if [ -z "$DEBKEY" ]; then
+#  echo "Please define environment variable DEBKEY with your key ID you want to use for signing the Debian package."
+#  exit 1
+#fi
+#if ! which twine > /dev/null; then
+#  echo 'Please install twine>=1.11.0, e.g. with "pipx install twine" or "pip3 install --user twine".'
+#  exit 1
+#fi
 
-# Prepare files with new version number
-sed -e "s/^__version__ = .*/__version__ = \"$VERSION\"/" -i benchexec/__init__.py
-dch -v "$VERSION-1" "New upstream version."
-dch -r ""
+## Prepare files with new version number
+#sed -e "s/^__version__ = .*/__version__ = \"$VERSION\"/" -i benchexec/__init__.py
+#dch -v "$VERSION-1" "New upstream version."
+#dch -r ""
 
-git commit debian/changelog benchexec/__init__.py -m"Release $VERSION"
+#git commit debian/changelog benchexec/__init__.py -m"Release $VERSION"
 
 
 # Other preparations
@@ -80,9 +80,10 @@ virtualenv -p /usr/bin/python3 "$TEMP3"
 . "$TEMP3/bin/activate"
 git clone "file://$DIR" "$TEMP3/benchexec"
 pushd "$TEMP3/benchexec"
+git checkout vampire-dev
 pip install "pip >= 10.0"
 pip install -e "."
-python setup.py nosetests
+#python setup.py nosetests
 python setup.py sdist bdist_wheel
 popd
 deactivate
@@ -90,48 +91,55 @@ cp "$TEMP3/benchexec/dist/"* "$DIST_DIR"
 rm -rf "$TEMP3"
 
 
-# Build Debian package
+echo "Build Debian package"
 TAR="BenchExec-$VERSION.tar.gz"
 
 TEMP_DEB="$(mktemp -d)"
 cp "$DIST_DIR/$TAR" "$TEMP_DEB"
 pushd "$TEMP_DEB"
+echo "blah1"
 tar xf "$TAR"
+echo "blah2"
 cp -r "$DIR/debian" "$TEMP_DEB/BenchExec-$VERSION"
+echo "blah3"
 cd "BenchExec-$VERSION"
+echo "blah4"
 
 dh_make -p "benchexec_$VERSION" --createorig -f "../$TAR" -i -c apache || true
+echo "blah5"
 
 dpkg-buildpackage --build=binary --no-sign
-dpkg-buildpackage --build=source -sa "--sign-key=$DEBKEY"
+echo "blah6"
+#dpkg-buildpackage --build=source -sa "--sign-key=$DEBKEY"
 popd
-cp "$TEMP_DEB/benchexec_$VERSION"{.orig.tar.gz,-1_all.deb,-1.dsc,-1.debian.tar.xz,-1_source.buildinfo,-1_source.changes} "$DIST_DIR"
+echo "blah7"
+cp "$TEMP_DEB/benchexec_$VERSION"-1_all.deb "$DIST_DIR"
 rm -rf "$TEMP_DEB"
 
-for f in "$DIST_DIR/BenchExec-$VERSION"*.{whl,tar.gz} "$DIST_DIR/benchexec_$VERSION"*.deb; do
-  gpg --detach-sign -a -u "$DEBKEY" "$f"
-done
-git tag -s "$VERSION" -m "Release $VERSION"
+#for f in "$DIST_DIR/BenchExec-$VERSION"*.{whl,tar.gz} "$DIST_DIR/benchexec_$VERSION"*.deb; do
+#  gpg --detach-sign -a -u "$DEBKEY" "$f"
+#done
+#git tag -s "$VERSION" -m "Release $VERSION"
 
 
 # Upload and finish
-read -p "Everything finished, do you want to release version '$VERSION' publically? (y/n) " -n 1 -r
-echo
-if ! [[ $REPLY =~ ^[Yy]$ ]]; then
-  exit 0
-fi
+#read -p "Everything finished, do you want to release version '$VERSION' publically? (y/n) " -n 1 -r
+#echo
+#if ! [[ $REPLY =~ ^[Yy]$ ]]; then
+#  exit 0
+#fi
 
-git push --tags
-twine upload "$DIST_DIR/BenchExec"*
-dput ppa:sosy-lab/benchmarking "$DIST_DIR/benchexec_$VERSION-1_source.changes"
-
-read -p "Please enter next version number:  " -r
-sed -e "s/^__version__ = .*/__version__ = \"$REPLY\"/" -i benchexec/__init__.py
-git commit benchexec/__init__.py -m"Prepare version number for next development cycle."
-
-
-echo
-echo "Please create a release on GitHub and add content from CHANGELOG.md and the following files:"
-ls -1 "$DIST_DIR/BenchExec-$VERSION"*.{whl,whl.asc,tar.gz,tar.gz.asc} "$DIST_DIR/benchexec_$VERSION"*.{deb,deb.asc}
-echo "=> https://github.com/sosy-lab/benchexec/releases/new?tag=$VERSION&title=Release%20$VERSION"
-echo "Please also copy the binary PPA packages to all newer supported Ubuntu versions after they have been built by going to https://launchpad.net/%7Esosy-lab/+archive/ubuntu/benchmarking/+copy-packages"
+#git push --tags
+#twine upload "$DIST_DIR/BenchExec"*
+#dput ppa:sosy-lab/benchmarking "$DIST_DIR/benchexec_$VERSION-1_source.changes"
+#
+#read -p "Please enter next version number:  " -r
+#sed -e "s/^__version__ = .*/__version__ = \"$REPLY\"/" -i benchexec/__init__.py
+#git commit benchexec/__init__.py -m"Prepare version number for next development cycle."
+#
+#
+#echo
+#echo "Please create a release on GitHub and add content from CHANGELOG.md and the following files:"
+#ls -1 "$DIST_DIR/BenchExec-$VERSION"*.{whl,whl.asc,tar.gz,tar.gz.asc} "$DIST_DIR/benchexec_$VERSION"*.{deb,deb.asc}
+#echo "=> https://github.com/sosy-lab/benchexec/releases/new?tag=$VERSION&title=Release%20$VERSION"
+#echo "Please also copy the binary PPA packages to all newer supported Ubuntu versions after they have been built by going to https://launchpad.net/%7Esosy-lab/+archive/ubuntu/benchmarking/+copy-packages"
